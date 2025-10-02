@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chatspace</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem; }
+      .row { margin-bottom: 0.5rem; }
+      #messages { border: 1px solid #ddd; padding: 0.75rem; height: 300px; overflow-y: auto; }
+      input { padding: 0.4rem; }
+      button { padding: 0.45rem 0.8rem; }
+      label { display: inline-block; width: 80px; }
+    </style>
+  </head>
+  <body>
+    <h1>Chatspace</h1>
+    <div class="row">
+      <label>Room</label>
+      <input id="room" placeholder="general" value="general" />
+    </div>
+    <div class="row">
+      <label>Name</label>
+      <input id="name" placeholder="your-name" />
+    </div>
+    <div class="row">
+      <button id="connect">Connect</button>
+      <button id="disconnect" disabled>Disconnect</button>
+    </div>
+
+    <div id="messages"></div>
+
+    <div class="row" style="margin-top: 0.7rem;">
+      <input id="message" placeholder="Type a message..." style="width: 70%;" />
+      <button id="send" disabled>Send</button>
+    </div>
+
+    <script>
+      let ws;
+      const messages = document.getElementById('messages');
+      const append = (text) => {
+        const d = document.createElement('div');
+        d.textContent = text;
+        messages.appendChild(d);
+        messages.scrollTop = messages.scrollHeight;
+      };
+
+      document.getElementById('connect').addEventListener('click', () => {
+        const room = document.getElementById('room').value || 'general';
+        const name = document.getElementById('name').value || 'anonymous';
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        const url = `${proto}://${location.host}/ws/${encodeURIComponent(room)}?username=${encodeURIComponent(name)}`;
+        ws = new WebSocket(url);
+        ws.onopen = () => {
+          append(`[connected to ${room} as ${name}]`);
+          document.getElementById('send').disabled = false;
+          document.getElementById('disconnect').disabled = false;
+          document.getElementById('connect').disabled = true;
+        };
+        ws.onmessage = (ev) => append(ev.data);
+        ws.onclose = () => {
+          append('[disconnected]');
+          document.getElementById('send').disabled = true;
+          document.getElementById('disconnect').disabled = true;
+          document.getElementById('connect').disabled = false;
+        };
+      });
+
+      document.getElementById('disconnect').addEventListener('click', () => {
+        if (ws) ws.close();
+      });
+
+      document.getElementById('send').addEventListener('click', () => {
+        const input = document.getElementById('message');
+        if (ws && input.value.trim()) {
+          ws.send(input.value);
+          input.value = '';
+        }
+      });
+
+      document.getElementById('message').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('send').click();
+      });
+    </script>
+  </body>
+</html>
